@@ -1,2 +1,2 @@
 Set WshShell = CreateObject("WScript.Shell")
-WshShell.Run """C:\Users\lucas38535\Desktop\atualizador_salas\iniciar.bat""", 0, False
+WshShell.Run """C:\Users\lucas38535\Documents\SENAI-AMPERE\iniciar.bat""", 0, False
