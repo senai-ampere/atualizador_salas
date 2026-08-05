@@ -3,7 +3,7 @@
 
 :loop
 
-cd /d C:\Users\lucas38535\Desktop\atualizador_salas\atualizar.js
+cd /d C:\Users\lucas38535\Documents\SENAI-AMPERE\atualizador_salas\atualizar.js
 
 node atualizar.js
 
