@@ -1,0 +1,26 @@
+{
+  "name": "atualizador_salas",
+  "version": "1.0.0",
+  "description": "��#\u0000 \u0000a\u0000t\u0000u\u0000a\u0000l\u0000i\u0000z\u0000a\u0000d\u0000o\u0000r\u0000_\u0000s\u0000a\u0000l\u0000a\u0000s\u0000\r\u0000 \u0000",
+  "main": "atualizar.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/senai-ampere/atualizador_salas.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/senai-ampere/atualizador_salas/issues"
+  },
+  "homepage": "https://github.com/senai-ampere/atualizador_salas#readme",
+  "dependencies": {
+    "axios": "^1.19.0",
+    "dotenv": "^17.4.2",
+    "xlsx": "^0.18.5"
+  }
+}
