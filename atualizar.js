@@ -33,23 +33,39 @@ function obterNomeAbaAtual() {
   return `${meses[hoje.getMonth()]} ${hoje.getFullYear()}`;
 }
 
+function obterDataLocal() {
+
+  const hoje = new Date();
+
+  return `${hoje.getFullYear()}-${String(
+    hoje.getMonth() + 1
+  ).padStart(2, "0")}-${String(
+    hoje.getDate()
+  ).padStart(2, "0")}`;
+}
+
 function excelDateToISO(valor) {
 
   if (!valor) return null;
 
   if (typeof valor === "number") {
 
-    const data =
-      XLSX.SSF.parse_date_code(valor);
+    const data = XLSX.SSF.parse_date_code(valor);
 
     return `${data.y}-${String(data.m).padStart(2, "0")}-${String(data.d).padStart(2, "0")}`;
   }
 
   if (valor instanceof Date) {
 
-    return valor
-      .toISOString()
-      .split("T")[0];
+    return valor.toISOString().split("T")[0];
+  }
+
+  if (typeof valor === "string") {
+
+    const d = new Date(valor);
+
+    if (!isNaN(d))
+      return d.toISOString().split("T")[0];
   }
 
   return null;
@@ -61,28 +77,35 @@ function gerarDados(workbook) {
 
   console.log(`Lendo aba: ${nomeAba}`);
 
-  const worksheet =
-    workbook.Sheets[nomeAba];
-
-  if (!worksheet) {
-
-    throw new Error(
-      `A aba '${nomeAba}' não foi encontrada.`
-    );
-  }
-
-  const linhas =
+  const worksheet = workbook.Sheets[nomeAba];
+  console.log(
     XLSX.utils.sheet_to_json(
       worksheet,
       {
         header: 1,
-        defval: ""
+        raw: false,
+        defval: "<VAZIO>"
       }
-    );
+    )
+  );
+
+  if (!worksheet) {
+
+    throw new Error(`A aba '${nomeAba}' não foi encontrada.`);
+  }
+
+  const linhas = XLSX.utils.sheet_to_json(
+    worksheet,
+    {
+      header: 1,
+      defval: ""
+    }
+  );
 
   const cabecalhos = linhas[0];
 
-  const dados = [];
+  console.log("\nCABEÇALHOS:");
+  console.table(cabecalhos);
 
   const ambientesPermitidos = [
     "SALA 01",
@@ -97,51 +120,67 @@ function gerarDados(workbook) {
     "LAB. VESTUÁRIO"
   ];
 
+  const dados = [];
+
   for (let i = 1; i < linhas.length; i++) {
 
     const linha = linhas[i];
 
     const diaSemana = linha[0];
+
     const data = excelDateToISO(linha[1]);
 
-    if (!data) continue;
+    if (!data)
+      continue;
 
-    for (
-      let coluna = 2;
-      coluna < cabecalhos.length;
-      coluna++
-    ) {
+    if (data === obterDataLocal()) {
 
-      const sala =
-        cabecalhos[coluna]
-          ?.toString()
-          .trim();
+      console.log("\n====================================================");
+      console.log("LINHA REFERENTE AO DIA DE HOJE");
+      console.log("====================================================");
+      console.table(linha);
+    }
 
-      if (
-        !ambientesPermitidos.includes(sala)
-      ) {
+    for (let coluna = 2; coluna < cabecalhos.length; coluna++) {
+
+      let sala = cabecalhos[coluna];
+
+      sala = sala
+        ?.toString()
+        .trim()
+        .replace(/\s+/g, " ");
+
+      if (!ambientesPermitidos.includes(sala))
         continue;
-      }
 
       const turma = linha[coluna];
 
+      console.log({
+        data,
+        sala,
+        turma,
+        tipo: typeof turma
+      });
+
       if (
-        turma &&
+        turma !== undefined &&
+        turma !== null &&
         turma.toString().trim() !== ""
       ) {
 
         dados.push({
           data,
-          diaSemana: diaSemana
-            ?.toString()
-            .trim(),
-
+          diaSemana: diaSemana.toString().trim(),
           sala,
-
-          turma: turma
-            ?.toString()
-            .trim()
+          turma: turma.toString().trim()
         });
+
+      } else {
+
+        if (data === obterDataLocal()) {
+
+          console.log(`❌ Sala vazia -> ${sala}`);
+        }
       }
     }
   }
@@ -155,60 +194,42 @@ async function atualizarGithub() {
   console.log("ATUALIZADOR DE SALAS");
   console.log("=================================");
 
-  const stats =
-    fs.statSync(EXCEL_PATH);
+  const stats = fs.statSync(EXCEL_PATH);
 
-  console.log(
-    "Última alteração do Excel:",
-    stats.mtime
-  );
+  console.log("Última alteração:", stats.mtime);
 
   console.log("Abrindo planilha...");
 
-  const workbook =
-    XLSX.readFile(EXCEL_PATH);
+  const workbook = XLSX.readFile(EXCEL_PATH);
 
-  const nomeAba = obterNomeAbaAtual();
+  const dados = gerarDados(workbook);
 
-  const worksheet =
-    workbook.Sheets[nomeAba];
+  console.log(`\n${dados.length} registros encontrados.`);
 
-  const linhas =
-    XLSX.utils.sheet_to_json(
-      worksheet,
-      {
-        header: 1,
-        defval: ""
-      }
-    );
+  console.log("\nREGISTROS DE HOJE:");
 
-  const dados =
-    gerarDados(workbook);
-
-  console.log(
-    `${dados.length} registros encontrados`
+  console.table(
+    dados.filter(
+      d => d.data === obterDataLocal()
+    )
   );
 
   const jsonString =
     JSON.stringify(dados, null, 2);
 
-  console.log(
-    "Buscando SHA atual..."
-  );
+  console.log("Buscando SHA...");
 
   const arquivoAtual =
     await axios.get(
       `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/contents/dados.json`,
       {
         headers: {
-          Authorization:
-            `Bearer ${GITHUB_TOKEN}`
+          Authorization: `Bearer ${GITHUB_TOKEN}`
         }
       }
     );
 
-  const sha =
-    arquivoAtual.data.sha;
+  const sha = arquivoAtual.data.sha;
 
   const conteudoAtual =
     Buffer
@@ -220,45 +241,31 @@ async function atualizarGithub() {
 
   if (conteudoAtual === jsonString) {
 
-    console.log(
-      "Nenhuma alteração encontrada."
-    );
+    console.log("Nenhuma alteração.");
 
     return;
   }
 
-  console.log(
-    "Enviando atualização..."
-  );
+  console.log("Enviando atualização...");
 
   await axios.put(
     `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/contents/dados.json`,
     {
-      message:
-        `Atualização automática ${new Date().toLocaleString("pt-BR")}`,
-
-      content:
-        Buffer
-          .from(jsonString)
-          .toString("base64"),
-
+      message: `Atualização automática ${new Date().toLocaleString("pt-BR")}`,
+      content: Buffer
+        .from(jsonString)
+        .toString("base64"),
       sha
     },
     {
       headers: {
-        Authorization:
-          `Bearer ${GITHUB_TOKEN}`
+        Authorization: `Bearer ${GITHUB_TOKEN}`
       }
     }
   );
 
-  console.log(
-    "Atualização concluída!"
-  );
-
-  console.log(
-    `Total enviado: ${dados.length} registros`
-  );
+  console.log("Atualização concluída.");
+  console.log(`Total enviado: ${dados.length}`);
 }
 
 atualizarGithub()
