@@ -91,9 +91,9 @@ function gerarDados(workbook) {
     "SALA MÓVEL 01",
     "SALA MÓVEL 02",
     "LAB. INFORMÁTICA",
+    "LAB. MECÂNICA",
     "LAB. AUTOMAÇÃO",
     "LAB. ELÉTRICA",
-    "LAB. MECÂNICA",
     "LAB. VESTUÁRIO"
   ];
 
